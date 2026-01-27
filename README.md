@@ -71,7 +71,7 @@ module "example_service" {
   alb_listener_arn      = "arn:aws:elasticloadbalancing:..."
   alb_security_group_id = "sg-xxxxxxxx"
 
-  # Routing (explicit priority)
+  # Routing (explicit priority - REQUIRED)
   path_patterns          = ["/rest/*"]
   listener_rule_priority = 501
 
@@ -81,10 +81,20 @@ module "example_service" {
   container_port    = 8080
   health_check_path = "/rest/rest/test/hello.json"
 
+  # Task resources
+  cpu    = 512
+  memory = 1024
+
   # Service
   desired_count          = 1
   assign_public_ip       = false
   enable_execute_command = false
+
+  # Production settings
+  platform_version                   = "1.4.0"
+  deployment_minimum_healthy_percent = 100
+  deployment_maximum_percent         = 200
+  target_group_deregistration_delay  = 30
 
   # Autoscaling
   enable_autoscaling         = true
@@ -197,16 +207,75 @@ module "example_service" {
 
 ---
 
+## Configuration Options
+
+### Security Configuration
+
+**Security Group Egress Rules**
+```hcl
+security_group_egress_rules = [
+  {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow HTTPS outbound"
+  },
+  {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow HTTP outbound"
+  }
+]
+```
+
+**ECS Exec** (disabled by default for security)
+```hcl
+enable_execute_command = false  # Default: false
+```
+
+### Production Settings
+
+**Platform Version** (pinned for stability)
+```hcl
+platform_version = "1.4.0"  # Default: 1.4.0 (not LATEST)
+```
+
+**Deployment Configuration**
+```hcl
+deployment_minimum_healthy_percent = 50   # Default: 100
+deployment_maximum_percent         = 150  # Default: 200
+```
+
+**Target Group Settings**
+```hcl
+target_group_deregistration_delay = 60  # Default: 30 seconds
+```
+
+### Resource Limits
+
+**Task-level resources** (Fargate manages at task level)
+```hcl
+cpu    = 1024  # Must be: 256, 512, 1024, 2048, 4096
+memory = 2048  # Must match valid CPU/Memory combinations
+```
+
+---
+
 ## Security Best Practices
 
 - ECS tasks run in private subnets
-- No public IPs assigned to tasks
+- No public IPs assigned to tasks by default
 - Inbound traffic allowed only from ALB security group
 - IAM roles follow least-privilege principle
 - Deployment circuit breaker enabled
+- ECS Exec disabled by default for security
+- Platform version pinned (not LATEST) for stability
+- Configurable egress rules with secure defaults
 - Explicit, predictable infrastructure behavior
 
----
 
 ## SOC2 Notes
 

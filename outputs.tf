@@ -2,10 +2,6 @@ output "service_name" {
   value = aws_ecs_service.this.name
 }
 
-output "service_arn" {
-  value = aws_ecs_service.this.arn
-}
-
 output "task_definition_arn" {
   value = aws_ecs_task_definition.this.arn
 }
@@ -15,7 +11,7 @@ output "target_group_arn" {
 }
 
 output "log_group_name" {
-  value = aws_cloudwatch_log_group.this.name
+  value = aws_cloudwatch_log_group.this[0].name
 }
 
 output "listener_rule_arn" {
@@ -39,5 +35,5 @@ output "ecr_repository_name" {
 
 output "task_security_group_id" {
   description = "Managed task security group ID (null if create_task_security_group=false)"
-  value       = var.create_task_security_group ? aws_security_group.task[0].id : null
+  value       = aws_security_group.task.id
 }

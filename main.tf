@@ -5,7 +5,7 @@ resource "aws_ecs_service" "this" {
   desired_count   = var.desired_count
   launch_type     = "FARGATE"
 
-  platform_version = "LATEST"
+  platform_version = var.platform_version
   propagate_tags   = "SERVICE"
 
   enable_execute_command = var.enable_execute_command
@@ -17,13 +17,7 @@ resource "aws_ecs_service" "this" {
 
   network_configuration {
     subnets = var.subnet_ids
-
-    security_groups = (
-      var.create_task_security_group
-      ? concat([aws_security_group.task[0].id], var.additional_security_group_ids)
-      : var.additional_security_group_ids
-    )
-
+    security_groups = (concat([aws_security_group.task.id], var.additional_security_group_ids))
     assign_public_ip = var.assign_public_ip
   }
 
@@ -33,8 +27,8 @@ resource "aws_ecs_service" "this" {
     container_port   = var.container_port
   }
 
-  deployment_minimum_healthy_percent = 100
-  deployment_maximum_percent         = 200
+  deployment_minimum_healthy_percent = var.deployment_minimum_healthy_percent
+  deployment_maximum_percent         = var.deployment_maximum_percent
 
   lifecycle {
     ignore_changes = [desired_count]

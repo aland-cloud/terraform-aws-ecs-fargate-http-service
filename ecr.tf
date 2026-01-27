@@ -18,3 +18,26 @@ resource "aws_ecr_repository" "this" {
     ManagedBy   = "terraform"
   })
 }
+
+resource "aws_ecr_lifecycle_policy" "keep_last_n" {
+  count      = var.create_ecr_repository ? 1 : 0
+  repository = aws_ecr_repository.this[0].name
+
+  policy = jsonencode({
+    rules = [
+      {
+        rulePriority = 1
+        description  = "Keep only the last ${var.ecr_keep_last_images} tagged images; expire older ones"
+        selection = {
+          tagStatus     = "tagged"
+          tagPrefixList = [""] # matches all tags (optional; you can remove this line)
+          countType     = "imageCountMoreThan"
+          countNumber   = var.ecr_keep_last_images
+        }
+        action = {
+          type = "expire"
+        }
+      }
+    ]
+  })
+}

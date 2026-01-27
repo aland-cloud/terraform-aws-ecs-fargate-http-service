@@ -1,9 +1,3 @@
-locals {
-  alarm_actions = (
-  var.alarm_sns_topic_arn != null && var.alarm_sns_topic_arn != ""
-  ) ? [var.alarm_sns_topic_arn] : []
-}
-
 resource "aws_cloudwatch_metric_alarm" "ecs_cpu_high" {
   count               = var.enable_cloudwatch_alarms ? 1 : 0
   alarm_name          = "${var.name}-cpu-high"
@@ -17,7 +11,7 @@ resource "aws_cloudwatch_metric_alarm" "ecs_cpu_high" {
   metric_name         = "CPUUtilization"
 
   dimensions = {
-    ClusterName = var.ecs_cluster_name
+    ClusterName = local.ecs_cluster_name
     ServiceName = aws_ecs_service.this.name
   }
 
@@ -44,7 +38,7 @@ resource "aws_cloudwatch_metric_alarm" "ecs_memory_high" {
   metric_name         = "MemoryUtilization"
 
   dimensions = {
-    ClusterName = var.ecs_cluster_name
+    ClusterName = local.ecs_cluster_name
     ServiceName = aws_ecs_service.this.name
   }
 

@@ -8,53 +8,71 @@ data "aws_iam_policy_document" "ecs_task_assume" {
   }
 }
 
-resource "aws_iam_role" "execution" {
-  name               = "${var.name}-execution"
-  assume_role_policy = data.aws_iam_policy_document.ecs_task_assume.json
-
-  tags = merge(var.tags, {
-    Service     = var.name
-    ManagedBy   = "terraform"
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "execution" {
-  role       = aws_iam_role.execution.name
-  policy_arn  = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
-}
-
 data "aws_iam_policy_document" "execution_secrets" {
-  count = length(var.secrets) > 0 ? 1 : 0
+  count = length(var.execution_role_secrets) > 0 ? 1 : 0
 
-  statement {
-    effect = "Allow"
-    actions = [
-      "secretsmanager:GetSecretValue",
-      "ssm:GetParameters",
-      "ssm:GetParameter"
-    ]
-    resources = distinct([for s in var.secrets : s.valueFrom])
+  dynamic "statement" {
+    for_each = length(local.exec_secret_arns) > 0 ? [1] : []
+    content {
+      effect    = "Allow"
+      actions   = ["secretsmanager:GetSecretValue"]
+      resources = local.exec_secret_arns
+    }
+  }
+
+  dynamic "statement" {
+    for_each = length(local.exec_ssm_param_arns) > 0 ? [1] : []
+    content {
+      effect    = "Allow"
+      actions   = ["ssm:GetParameter", "ssm:GetParameters"]
+      resources = local.exec_ssm_param_arns
+    }
   }
 }
 
+resource "aws_iam_role" "execution_role" {
+  name               = "${var.name}-execution-role"
+  assume_role_policy = data.aws_iam_policy_document.ecs_task_assume.json
+
+  tags = merge(var.tags, {
+    Service   = var.name
+    ManagedBy = "terraform"
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "execution_managed" {
+  role       = aws_iam_role.execution_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+}
+
 resource "aws_iam_policy" "execution_secrets" {
-  count  = length(var.secrets) > 0 ? 1 : 0
-  name   = "${var.name}-execution-secrets"
+  count  = length(var.execution_role_secrets) > 0 ? 1 : 0
+  name   = "${var.name}-execution-secrets-policy"
   policy = data.aws_iam_policy_document.execution_secrets[0].json
 }
 
 resource "aws_iam_role_policy_attachment" "execution_secrets" {
-  count      = length(var.secrets) > 0 ? 1 : 0
-  role       = aws_iam_role.execution.name
+  count      = length(var.execution_role_secrets) > 0 ? 1 : 0
+  role       = aws_iam_role.execution_role.name
   policy_arn = aws_iam_policy.execution_secrets[0].arn
 }
 
-resource "aws_iam_role" "task" {
-  name               = "${var.name}-task"
+
+# Task Role
+resource "aws_iam_role" "task_role" {
+  name               = "${var.name}-task-role"
   assume_role_policy = data.aws_iam_policy_document.ecs_task_assume.json
 
   tags = merge(var.tags, {
-    Service     = var.name
-    ManagedBy   = "terraform"
+    Service   = var.name
+    ManagedBy = "terraform"
   })
+}
+
+resource "aws_iam_role_policy" "task_role_inline" {
+  count = var.task_role_inline_policy_json != null ? 1 : 0
+
+  name   = "${var.name}-task-inline"
+  role   = aws_iam_role.task_role.id
+  policy = var.task_role_inline_policy_json
 }

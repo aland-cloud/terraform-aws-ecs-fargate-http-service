@@ -5,10 +5,10 @@ resource "aws_ecs_task_definition" "this" {
   cpu                      = tostring(var.cpu)
   memory                   = tostring(var.memory)
 
-  execution_role_arn = aws_iam_role.execution.arn
-  task_role_arn      = aws_iam_role.task.arn
+  execution_role_arn       = aws_iam_role.execution_role.arn
+  task_role_arn            = aws_iam_role.task_role.arn
 
-  container_definitions = jsonencode([
+  container_definitions = var.custom_container_definitions != null ? var.custom_container_definitions : jsonencode([
     {
       name      = var.container_name
       image     = var.container_image
@@ -27,7 +27,7 @@ resource "aws_ecs_task_definition" "this" {
       ]
 
       secrets = [
-        for s in var.secrets : {
+        for s in var.execution_role_secrets : {
           name      = s.name
           valueFrom = s.valueFrom
         }
@@ -37,7 +37,7 @@ resource "aws_ecs_task_definition" "this" {
         logDriver = "awslogs"
         options = {
           awslogs-region        = var.aws_region
-          awslogs-group         = aws_cloudwatch_log_group.this.name
+          awslogs-group         = aws_cloudwatch_log_group.this[0].name
           awslogs-stream-prefix = "ecs"
         }
       }
