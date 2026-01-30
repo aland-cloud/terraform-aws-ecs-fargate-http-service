@@ -29,8 +29,7 @@ resource "aws_ecr_lifecycle_policy" "keep_last_n" {
         rulePriority = 1
         description  = "Keep only the last ${var.ecr_keep_last_images} tagged images; expire older ones"
         selection = {
-          tagStatus     = "tagged"
-          tagPrefixList = [""] # matches all tags (optional; you can remove this line)
+          tagStatus     = "any"
           countType     = "imageCountMoreThan"
           countNumber   = var.ecr_keep_last_images
         }
