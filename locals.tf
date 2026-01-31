@@ -8,7 +8,8 @@ locals {
   alarm_actions = (var.alarm_sns_topic_arn != null) ? [var.alarm_sns_topic_arn] : []
 
   exec_secret_arns = distinct([
-    for s in var.execution_role_secrets : s.valueFrom
+    for s in var.execution_role_secrets :
+    "${replace(s.valueFrom, "/:[^:]*::?$/", "")}*"
     if can(regex("^arn:aws:secretsmanager:", s.valueFrom))
   ])
 
