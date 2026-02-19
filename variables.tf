@@ -1,4 +1,12 @@
+###############################################################################
+# variables.tf (Terraform v1.5.x compatible)
+# - NO variable "validation" blocks that reference other variables
+# - ALL validations are implemented as `check` blocks with `assert { ... }`
+###############################################################################
+
+############################
 # Global Variables
+############################
 variable "name" {
   description = "Service name"
   type        = string
@@ -15,8 +23,9 @@ variable "tags" {
   default     = {}
 }
 
-
-# ECS Service Variables (main.tf)
+############################
+# ECS Service Variables
+############################
 variable "ecs_cluster_arn" {
   description = "ECS cluster ARN"
   type        = string
@@ -44,24 +53,17 @@ variable "deployment_minimum_healthy_percent" {
   description = "Lower limit on the number of running tasks during deployments"
   type        = number
   default     = 100
-  validation {
-    condition     = var.deployment_minimum_healthy_percent >= 0 && var.deployment_minimum_healthy_percent <= 100
-    error_message = "deployment_minimum_healthy_percent must be between 0 and 100."
-  }
 }
 
 variable "deployment_maximum_percent" {
   description = "Upper limit on the number of running tasks during deployments"
   type        = number
   default     = 200
-  validation {
-    condition     = var.deployment_maximum_percent >= 100 && var.deployment_maximum_percent <= 200
-    error_message = "deployment_maximum_percent must be between 100 and 200."
-  }
 }
 
-
-# Networking Variables (main.tf)
+############################
+# Networking Variables
+############################
 variable "vpc_id" {
   description = "VPC id"
   type        = string
@@ -73,12 +75,13 @@ variable "subnet_ids" {
 }
 
 variable "assign_public_ip" {
-  type        = bool
-  default     = false
+  type    = bool
+  default = false
 }
 
-
-# Task Definition Variables (task-definition.tf)
+############################
+# Task Definition Variables
+############################
 variable "container_image" {
   description = "Container image"
   type        = string
@@ -106,26 +109,12 @@ variable "cpu" {
   description = "Fargate CPU units"
   type        = number
   default     = 512
-  validation {
-    condition     = contains([256, 512, 1024, 2048, 4096], var.cpu)
-    error_message = "CPU must be one of: 256, 512, 1024, 2048, 4096."
-  }
 }
 
 variable "memory" {
   description = "Fargate memory MiB"
   type        = number
   default     = 1024
-  validation {
-    condition = (
-      (var.cpu == 256 && contains([512, 1024, 2048], var.memory)) ||
-      (var.cpu == 512 && contains([1024, 2048, 3072, 4096], var.memory)) ||
-      (var.cpu == 1024 && contains([2048, 3072, 4096, 5120, 6144, 7168, 8192], var.memory)) ||
-      (var.cpu == 2048 && var.memory >= 4096 && var.memory <= 16384 && var.memory % 1024 == 0) ||
-      (var.cpu == 4096 && var.memory >= 8192 && var.memory <= 30720 && var.memory % 1024 == 0)
-    )
-    error_message = "Invalid CPU/Memory combination. See AWS Fargate documentation for valid combinations."
-  }
 }
 
 variable "environment_variables" {
@@ -143,8 +132,9 @@ variable "execution_role_secrets" {
   default = []
 }
 
-
-# ALB Variables (alb.tf)
+############################
+# ALB Variables
+############################
 variable "alb_listener_arn" {
   description = "ALB listener ARN (HTTPS for public ALB; HTTP for internal ALB currently)"
   type        = string
@@ -174,26 +164,18 @@ variable "host_headers" {
 }
 
 variable "target_group_deregistration_delay" {
-  description = "Time for Elastic Load Balancing to wait before changing the state of a deregistering target from draining to unused"
+  description = "Time for ELB to wait before changing deregistering target from draining to unused"
   type        = number
   default     = 30
-  validation {
-    condition     = var.target_group_deregistration_delay >= 0 && var.target_group_deregistration_delay <= 3600
-    error_message = "target_group_deregistration_delay must be between 0 and 3600 seconds."
-  }
 }
 
-
-# Security Group Variables (security-group.tf)
+############################
+# Security Group Variables
+############################
 variable "alb_ingress_cidr_blocks" {
   description = "CIDR blocks allowed to reach the service on container_port (e.g. ALB subnet CIDRs, corporate NAT, etc.)"
   type        = list(string)
   default     = []
-
-  validation {
-    condition     = length(var.alb_ingress_cidr_blocks) > 0
-    error_message = "alb_ingress_cidr_blocks must contain at least one CIDR block."
-  }
 }
 
 variable "additional_security_group_ids" {
@@ -222,22 +204,25 @@ variable "security_group_egress_rules" {
   ]
 }
 
-
-# IAM Variables (iam.tf)
+############################
+# IAM Variables
+############################
 variable "task_role_inline_policy_json" {
+  description = "Optional inline policy JSON to attach to the task role"
   type        = string
   default     = null
-  description = "Optional inline policy JSON to attach to the task role"
 }
 
-
-# ECR Variables (ecr.tf)
+############################
+# ECR Variables
+############################
 variable "create_ecr_repository" {
   description = "Whether to create ECR repository"
   type        = bool
   default     = true
 }
 
+# (Kept as-is from your original, though it duplicates create_ecr_repository)
 variable "ecr_repo" {
   description = "Whether to create ECR repository"
   type        = bool
@@ -254,10 +239,6 @@ variable "ecr_image_tag_mutability" {
   description = "Image tag mutability"
   type        = string
   default     = "IMMUTABLE"
-  validation {
-    condition     = contains(["IMMUTABLE", "MUTABLE"], var.ecr_image_tag_mutability)
-    error_message = "Must be IMMUTABLE or MUTABLE"
-  }
 }
 
 variable "ecr_scan_on_push" {
@@ -276,15 +257,11 @@ variable "ecr_keep_last_images" {
   description = "Number of most recent images to keep in the ECR repository (older images will be expired by lifecycle policy)."
   type        = number
   default     = 20
-
-  validation {
-    condition     = var.ecr_keep_last_images >= 1 && var.ecr_keep_last_images <= 1000
-    error_message = "ecr_keep_last_images must be between 1 and 1000."
-  }
 }
 
-
-# CloudWatch Logs Variables (cloudwatch-logs.tf)
+############################
+# CloudWatch Logs Variables
+############################
 variable "enable_cloudwatch_logs" {
   description = "Enable cloudwatch logs: true|false"
   type        = bool
@@ -303,8 +280,9 @@ variable "cloudwatch_log_kms_key_id" {
   default     = null
 }
 
-
-# CloudWatch Alarms Variables (cloudwatch-alarms.tf)
+############################
+# CloudWatch Alarms Variables
+############################
 variable "enable_cloudwatch_alarms" {
   description = "Enable CloudWatch alarms for ECS service"
   type        = bool
@@ -347,16 +325,13 @@ variable "memory_high_threshold" {
   default     = 85
 }
 
-
-# Autoscaling Variables (autoscaling.tf)
+############################
+# Autoscaling Variables
+############################
 variable "enable_autoscaling" {
   type        = bool
   description = "Enable ECS Service autoscaling"
   default     = true
-  validation {
-    condition = !var.enable_autoscaling || (var.enable_cpu_scaling || var.enable_memory_scaling || var.enable_alb_request_scaling)
-    error_message = "When enable_autoscaling is true, at least one of enable_cpu_scaling, enable_memory_scaling, or enable_alb_request_scaling must be true."
-  }
 }
 
 variable "enable_cpu_scaling" {
@@ -405,4 +380,162 @@ variable "autoscaling_alb_request_target" {
   type        = number
   description = "Target ALB requests per target for autoscaling"
   default     = 1000
+}
+
+###############################################################################
+# CHECKS (Terraform v1.5.x syntax)
+###############################################################################
+
+check "deployment_minimum_healthy_percent_range" {
+  assert {
+    condition     = var.deployment_minimum_healthy_percent >= 0 && var.deployment_minimum_healthy_percent <= 100
+    error_message = "deployment_minimum_healthy_percent must be between 0 and 100."
+  }
+}
+
+check "deployment_maximum_percent_range" {
+  assert {
+    condition     = var.deployment_maximum_percent >= 100 && var.deployment_maximum_percent <= 200
+    error_message = "deployment_maximum_percent must be between 100 and 200."
+  }
+}
+
+check "target_group_deregistration_delay_range" {
+  assert {
+    condition     = var.target_group_deregistration_delay >= 0 && var.target_group_deregistration_delay <= 3600
+    error_message = "target_group_deregistration_delay must be between 0 and 3600 seconds."
+  }
+}
+
+check "alb_ingress_cidr_blocks_nonempty" {
+  assert {
+    condition     = length(var.alb_ingress_cidr_blocks) > 0
+    error_message = "alb_ingress_cidr_blocks must contain at least one CIDR block."
+  }
+}
+
+check "listener_rule_priority_positive" {
+  assert {
+    condition     = var.listener_rule_priority > 0
+    error_message = "listener_rule_priority must be > 0."
+  }
+}
+
+check "container_port_range" {
+  assert {
+    condition     = var.container_port >= 1 && var.container_port <= 65535
+    error_message = "container_port must be between 1 and 65535."
+  }
+}
+
+check "cpu_allowed_values" {
+  assert {
+    condition     = contains([256, 512, 1024, 2048, 4096], var.cpu)
+    error_message = "cpu must be one of: 256, 512, 1024, 2048, 4096."
+  }
+}
+
+check "fargate_cpu_memory_combo" {
+  assert {
+    condition = (
+    (var.cpu == 256  && contains([512, 1024, 2048], var.memory)) ||
+    (var.cpu == 512  && contains([1024, 2048, 3072, 4096], var.memory)) ||
+    (var.cpu == 1024 && contains([2048, 3072, 4096, 5120, 6144, 7168, 8192], var.memory)) ||
+    (var.cpu == 2048 && var.memory >= 4096 && var.memory <= 16384 && var.memory % 1024 == 0) ||
+    (var.cpu == 4096 && var.memory >= 8192 && var.memory <= 30720 && var.memory % 1024 == 0)
+    )
+    error_message = "Invalid CPU/Memory combination. See AWS Fargate documentation for valid combinations."
+  }
+}
+
+check "custom_container_definitions_is_valid_json_if_set" {
+  assert {
+    condition     = var.custom_container_definitions == null || can(jsondecode(var.custom_container_definitions))
+    error_message = "custom_container_definitions must be a valid JSON string when provided."
+  }
+}
+
+check "ecr_image_tag_mutability_enum" {
+  assert {
+    condition     = contains(["IMMUTABLE", "MUTABLE"], var.ecr_image_tag_mutability)
+    error_message = "ecr_image_tag_mutability must be IMMUTABLE or MUTABLE."
+  }
+}
+
+check "ecr_keep_last_images_range" {
+  assert {
+    condition     = var.ecr_keep_last_images >= 1 && var.ecr_keep_last_images <= 1000
+    error_message = "ecr_keep_last_images must be between 1 and 1000."
+  }
+}
+
+check "autoscaling_requires_a_policy" {
+  assert {
+    condition = (
+    !var.enable_autoscaling ||
+    var.enable_cpu_scaling ||
+    var.enable_memory_scaling ||
+    var.enable_alb_request_scaling
+    )
+    error_message = "When enable_autoscaling is true, at least one of enable_cpu_scaling, enable_memory_scaling, or enable_alb_request_scaling must be true."
+  }
+}
+
+check "autoscaling_capacity_bounds" {
+  assert {
+    condition     = var.autoscaling_min_capacity >= 0 && var.autoscaling_max_capacity >= var.autoscaling_min_capacity
+    error_message = "autoscaling_min_capacity must be >= 0 and autoscaling_max_capacity must be >= autoscaling_min_capacity."
+  }
+}
+
+check "autoscaling_cpu_target_range" {
+  assert {
+    condition     = var.autoscaling_cpu_target > 0 && var.autoscaling_cpu_target <= 100
+    error_message = "autoscaling_cpu_target must be between 1 and 100."
+  }
+}
+
+check "autoscaling_alb_request_target_positive" {
+  assert {
+    condition     = var.autoscaling_alb_request_target > 0
+    error_message = "autoscaling_alb_request_target must be > 0."
+  }
+}
+
+check "cloudwatch_retention_days_positive" {
+  assert {
+    condition     = var.log_retention_days > 0
+    error_message = "log_retention_days must be > 0."
+  }
+}
+
+check "alarm_period_seconds_positive" {
+  assert {
+    condition     = var.alarm_period_seconds > 0
+    error_message = "alarm_period_seconds must be > 0."
+  }
+}
+
+check "alarm_evaluation_periods_positive" {
+  assert {
+    condition     = var.alarm_evaluation_periods > 0
+    error_message = "alarm_evaluation_periods must be > 0."
+  }
+}
+
+check "thresholds_sane" {
+  assert {
+    condition = (
+    var.cpu_high_threshold > 0 && var.cpu_high_threshold <= 100 &&
+    var.memory_high_threshold > 0 && var.memory_high_threshold <= 100
+    )
+    error_message = "cpu_high_threshold and memory_high_threshold must be between 1 and 100."
+  }
+}
+
+check "subnet_ids_reasonable_for_ha" {
+  assert {
+    condition     = length(var.subnet_ids) >= 2
+    error_message = "subnet_ids should contain at least 2 subnets for high availability."
+  }
 }
