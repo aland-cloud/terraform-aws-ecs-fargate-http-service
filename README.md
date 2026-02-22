@@ -56,15 +56,14 @@ ECS Fargate Service (private subnets)
 
 ```hcl
 module "example_service" {
-  source = "/Users/davidghazazyan/avrioai/terraform-aws-ecs-fargate-http-service"
+  source = "github.com/aland-cloud/terraform-aws-ecs-fargate-http-service"
 
   name       = "example-service"
   aws_region = "us-west-2"
 
   # ECS / VPC
-  ecs_cluster_arn  = "arn:aws:ecs:us-west-2:625966732367:cluster/staging-cluster"
+  ecs_cluster_arn  = "arn:aws:ecs:us-west-2:123456789012:cluster/staging-cluster"
   ecs_cluster_name = "staging-cluster"
-  vpc_id           = "vpc-xxxxxxxx"
   subnet_ids       = ["subnet-aaaa", "subnet-bbbb"]
 
   # ALB integration
