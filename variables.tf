@@ -61,6 +61,11 @@ variable "deployment_maximum_percent" {
   default     = 200
 }
 
+variable "health_check_grace_period_seconds" {
+  type    = number
+  default = 120
+}
+
 ############################
 # Networking Variables
 ############################
