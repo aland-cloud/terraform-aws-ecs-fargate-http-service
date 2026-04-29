@@ -62,8 +62,9 @@ variable "deployment_maximum_percent" {
 }
 
 variable "health_check_grace_period_seconds" {
-  type    = number
-  default = 120
+  description = "Time in seconds to ignore ALB target health check failures after a new task starts. Use this to give the application startup time before ECS considers the task unhealthy."
+  type        = number
+  default     = 0
 }
 
 ############################
