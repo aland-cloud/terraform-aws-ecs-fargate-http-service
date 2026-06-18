@@ -8,6 +8,7 @@ resource "aws_ecs_service" "this" {
 
   platform_version = var.platform_version
   propagate_tags   = "SERVICE"
+  enable_ecs_managed_tags = true
 
   enable_execute_command = var.enable_execute_command
 
